@@ -332,6 +332,8 @@ def ljdump(Server, Username, Password, Journal):
         print >>f, """<?xml version="1.0"?>"""
         print >>f, "<userpics>"
         for p in userpics:
+            if userpics[p] == "":
+                continue
             print >>f, """<userpic keyword="%s" url="%s" />""" % (p, userpics[p])
             pic = urllib2.urlopen(userpics[p])
             ext = MimeExtensions.get(pic.info()["Content-Type"], "")
