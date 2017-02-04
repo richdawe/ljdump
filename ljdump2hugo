@@ -1,0 +1,112 @@
+#!/usr/bin/python
+#
+# Copyright (C) 2017 Richard Dawe
+#
+
+import sys
+import xml.dom.minidom
+import re
+
+def convertTimestamp(timestamp):
+    # 2007-09-01 20:34:00
+    pat = re.compile('([0-9-]+) ([0-9:]+)')
+    m = pat.match(timestamp)
+    if m == None:
+        return None
+    return "%sT%sZ" % (m.group(1), m.group(2))
+
+# XXX: use it
+def convertLink(link):
+    pat = re.compile('<a href="([^"+])">([^<]+)</a>')
+    m = pat.match(link)
+    if m == None:
+        return link
+    return "[%s](%s)" % (m.group(2), m.group(1))
+
+def parseProps(props, eventData):
+    for node in props.childNodes:
+        if node.nodeType != xml.dom.Node.ELEMENT_NODE:
+            continue
+        if node.tagName == 'taglist':
+            taglist = node.firstChild.nodeValue
+            taglist = taglist.replace(" ", "")
+            eventData['tags'] = taglist.split(",")
+
+def convertHTMLToMarkdown(content):
+    content = content.replace('<p>', '\n')
+    content = content.replace('</p>', '')
+
+    content = content.replace('<h4>', '## ') # Why does LJ start at h4?
+    content = content.replace('</h4>', '')
+
+    content = content.replace('<tt>', '`')
+    content = content.replace('</tt>', '`')
+    content = content.replace('<strong>', '*')
+    content = content.replace('</strong>', '*')
+
+    content = content.replace('<br>', '\n')
+    content = content.replace('<br/>', '\n')
+    content = content.replace('<blockquote>', '')
+    content = content.replace('</blockquote>', '')
+    content = content.replace('<pre>', '\n```\n')
+    content = content.replace('</pre>', '\n```\n')
+
+    # XXX: This assumes all lists are unordered.
+    content = content.replace('<ul>', '')
+    content = content.replace('</ul>', '')
+    content = content.replace('<li>', '* ')
+    content = content.replace('</li>', '')
+
+    # XXX: regex for matching A links and converting to [comment](link)
+
+    return content
+
+def parseEvent(root):
+    eventData = {}
+
+    # Process the parts of the event
+    for node in root.childNodes:
+        if node.nodeType != xml.dom.Node.ELEMENT_NODE:
+            continue
+        if node.tagName == 'eventtime':
+            timestamp = convertTimestamp(node.firstChild.nodeValue)
+            if timestamp != None:
+                eventData['timestamp'] = timestamp
+        if node.tagName == 'props':
+            parseProps(node, eventData)
+        if node.tagName == 'subject':
+            eventData['title'] = node.firstChild.nodeValue
+        if node.tagName == 'event':
+            content = node.firstChild.nodeValue
+            eventData['content'] = convertHTMLToMarkdown(content)
+
+    return eventData
+
+def convertEventToToml(eventData):
+    #print eventData
+    return """+++
+date = "%s"
+title = "%s"
++++
+
+# %s
+
+%s
+""" % (
+    eventData['timestamp'], eventData['title'], eventData['title'], eventData['content']
+)
+
+def convertXmlToToml(root):
+    eventData = parseEvent(root)
+    return convertEventToToml(eventData)
+
+
+if __name__ == "__main__":
+    filename = sys.argv[1]
+    doc = xml.dom.minidom.parse(filename)
+    toml = convertXmlToToml(doc.documentElement)
+    print
+    print toml
+
+# vim:ts=4 et:
+
