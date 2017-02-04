@@ -8,20 +8,18 @@ import xml.dom.minidom
 import re
 
 def convertTimestamp(timestamp):
+    # XXX: how to reuse compiled patterns
     # 2007-09-01 20:34:00
-    pat = re.compile('([0-9-]+) ([0-9:]+)')
+    pat = re.compile(r'([0-9-]+) ([0-9:]+)')
     m = pat.match(timestamp)
     if m == None:
         return None
     return "%sT%sZ" % (m.group(1), m.group(2))
 
-# XXX: use it
-def convertLink(link):
-    pat = re.compile('<a href="([^"+])">([^<]+)</a>')
-    m = pat.match(link)
-    if m == None:
-        return link
-    return "[%s](%s)" % (m.group(2), m.group(1))
+def convertLinks(content):
+    pat = re.compile(r'<a href="([^"]+)">([^<]+)</a>', re.DOTALL | re.MULTILINE)
+    m = pat.search(content)
+    return pat.sub(r'[\2](\1)', content)
 
 def parseProps(props, eventData):
     for node in props.childNodes:
@@ -57,9 +55,7 @@ def convertHTMLToMarkdown(content):
     content = content.replace('<li>', '* ')
     content = content.replace('</li>', '')
 
-    # XXX: regex for matching A links and converting to [comment](link)
-
-    return content
+    return convertLinks(content)
 
 def parseEvent(root):
     eventData = {}
