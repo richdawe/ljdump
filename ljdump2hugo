@@ -3,15 +3,16 @@
 # Copyright (C) 2017 Richard Dawe
 #
 
+from __future__ import print_function
 import sys
 import xml.dom.minidom
 import re
 
+timestamp_pattern = re.compile(r'([0-9-]+) ([0-9:]+)')
+
 def convertTimestamp(timestamp):
-    # XXX: how to reuse compiled patterns
     # 2007-09-01 20:34:00
-    pat = re.compile(r'([0-9-]+) ([0-9:]+)')
-    m = pat.match(timestamp)
+    m = timestamp_pattern.match(timestamp)
     if m == None:
         return None
     return "%sT%sZ" % (m.group(1), m.group(2))
@@ -79,7 +80,7 @@ def parseEvent(root):
     return eventData
 
 def convertEventToToml(eventData):
-    #print eventData
+    #print(eventData)
     return """+++
 date = "%s"
 title = "%s"
@@ -99,10 +100,15 @@ def convertXmlToToml(root):
 
 if __name__ == "__main__":
     filename = sys.argv[1]
-    doc = xml.dom.minidom.parse(filename)
-    toml = convertXmlToToml(doc.documentElement)
-    print
-    print toml
+    # XX: check we have a filename
+    try:
+        doc = xml.dom.minidom.parse(filename)
+        toml = convertXmlToToml(doc.documentElement)
+        print()
+        print(toml)
+    except:
+        print("ERROR: Unable to convert file %s" % filename, file=sys.stderr)
+        raise
 
 # vim:ts=4 et:
 
