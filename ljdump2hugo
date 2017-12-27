@@ -38,19 +38,28 @@ def convertHTMLToMarkdown(content):
     content = content.replace('<h4>', '## ') # Why does LJ start at h4?
     content = content.replace('</h4>', '')
 
+    content = content.replace('<br>', '\n')
+    content = content.replace('<br/>', '\n')
+
+    content = content.replace('<blockquote><pre>', '\n```\n')
+    content = content.replace('</pre></blockquote>', '\n```\n')
+    content = content.replace('<blockquote><tt>', '\n```\n')
+    content = content.replace('</tt></blockquote>', '\n```\n')
+
     content = content.replace('<tt>', '`')
     content = content.replace('</tt>', '`')
     content = content.replace('<strong>', '*')
     content = content.replace('</strong>', '*')
 
-    content = content.replace('<br>', '\n')
-    content = content.replace('<br/>', '\n')
-    content = content.replace('<blockquote>', '')
-    content = content.replace('</blockquote>', '')
     content = content.replace('<pre>', '\n```\n')
     content = content.replace('</pre>', '\n```\n')
 
     # XXX: This assumes all lists are unordered.
+    content = content.replace('<li><p>', '\n* ')
+    content = content.replace('</p></li>', '\n')
+
+    content = content.replace('<ol>', '')
+    content = content.replace('</ol>', '')
     content = content.replace('<ul>', '')
     content = content.replace('</ul>', '')
     content = content.replace('<li>', '* ')
@@ -79,6 +88,10 @@ def parseEvent(root):
 
     return eventData
 
+def tomlEscape(str):
+    str = str.replace('"', '\\"')
+    return str
+
 def convertEventToToml(eventData):
     #print(eventData)
     return """+++
@@ -90,7 +103,7 @@ title = "%s"
 
 %s
 """ % (
-    eventData['timestamp'], eventData['title'], eventData['title'], eventData['content']
+    eventData['timestamp'], tomlEscape(eventData['title']), eventData['title'], eventData['content']
 )
 
 def convertXmlToToml(root):
@@ -105,7 +118,7 @@ if __name__ == "__main__":
         doc = xml.dom.minidom.parse(filename)
         toml = convertXmlToToml(doc.documentElement)
         print()
-        print(toml)
+        print(toml.encode('ascii', 'replace'))
     except:
         print("ERROR: Unable to convert file %s" % filename, file=sys.stderr)
         raise
